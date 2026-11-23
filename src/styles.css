@@ -1,0 +1,181 @@
+/* Palette, type and shapes follow StockFi (github.com/RWA-ID/stockfi, public/styles.css). */
+:root {
+  --canvas: #f0f0f0;
+  --screen: #f4f6f2;
+  --white: #fbfbfb;
+  --white-soft: #f8f8f7;
+  --line: #e4e6e1;
+  --header-cream: #f3e9db;
+  --header-pale: #eef4dc;
+  --header-lime: #e3f4bb;
+
+  --rose-light: #f4ccd8;
+  --stop: #c45b74;
+  --stop-well: #f8d6de;
+  --go: #70ac5c;
+  --go-well: #e3f3d6;
+  --pos-text: #49763e;
+  --caution: #e3b24a;
+  --caution-text: #3d2f0c;
+  --caution-well: #f8ebc8;
+  --lime-fab: #d1f38f;
+  --lime-fab-core: #c8ec88;
+
+  --ink: #12160c;
+  --ink-amount: #111e0c;
+  --ink-deep: #0c1810;
+  --muted: #999990;
+  --muted-dark: #5c5e56;
+  --pill-dark: #2c372f;
+  --pill-dark-hover: #3a4640;
+  --chip-outline: #c5c8c0;
+
+  --font-ui: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", var(--font-ui);
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --radius-card: 30px;
+  --radius-panel: 24px;
+  --shadow-hero: 0 12px 22px rgb(12 24 16 / 0.17);
+  --shadow-card: 0 8px 16px rgb(12 24 16 / 0.13);
+  --shadow-soft: 0 6px 14px rgb(12 24 16 / 0.1);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  color: var(--ink);
+  background-color: var(--canvas);
+  background-image:
+    linear-gradient(to bottom, rgb(240 240 240 / 0) 0, var(--canvas) 46vh),
+    linear-gradient(to right, var(--header-cream), var(--header-pale) 50%, var(--header-lime));
+  background-repeat: no-repeat;
+  background-size: 100% 100vh;
+  line-height: 1.45;
+  overflow-x: hidden;
+}
+a { color: inherit; }
+button, input, select, output { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 3px solid var(--lime-fab-core); outline-offset: 2px; }
+
+.page { max-width: 1120px; margin: 0 auto; padding: 0 40px 48px; }
+
+/* ---- Top bar ---- */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 28px 0 40px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.mark {
+  width: 26px; height: 26px; border-radius: 8px; background: var(--lime-fab); flex: none;
+  display: inline-grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--ink);
+}
+.word { font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
+.chain {
+  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px;
+  background: var(--ink-deep); color: var(--lime-fab); font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+
+.wallet {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px; max-width: 60vw;
+  border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+  font: 700 15px var(--font-ui); white-space: nowrap;
+}
+.wallet:hover { border-color: var(--chip-outline); }
+.wallet.dark { background: var(--pill-dark); border-color: var(--pill-dark); color: #fff; }
+.wallet.dark:hover { background: var(--pill-dark-hover); }
+.wallet.placeholder { width: 140px; visibility: hidden; }
+.wallet .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--go); flex: none; }
+.wallet .ens { overflow: hidden; text-overflow: ellipsis; }
+.wallet .addr { font-family: var(--font-mono); font-size: 14px; font-weight: 600; }
+
+/* ---- Swap card ---- */
+.card {
+  max-width: 480px; margin: 0 auto; background: var(--white); border-radius: var(--radius-card);
+  box-shadow: var(--shadow-hero); padding: 22px;
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.card-head h1 { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.3px; margin: 0; }
+.ghost {
+  height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+  font-size: 13px; font-weight: 600; color: var(--muted-dark);
+}
+.ghost:hover { border-color: var(--chip-outline); color: var(--ink); }
+
+.settings {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--screen); border-radius: 16px; padding: 12px 14px; margin-bottom: 12px; font-size: 14px; font-weight: 600;
+}
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--chip-outline); background: #fff;
+  font-size: 13px; font-weight: 600; color: var(--muted-dark);
+}
+.chip.on { background: var(--pill-dark); border-color: var(--pill-dark); color: #fff; }
+.chip-input {
+  width: 92px; height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--chip-outline);
+  background: #fff; font-size: 13px;
+}
+
+.leg { background: var(--screen); border-radius: var(--radius-panel); padding: 16px 18px 18px; }
+.leg + .flip + .leg { background: linear-gradient(to right, var(--header-pale), var(--header-lime)); }
+.leg-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted-dark); }
+.leg-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.amount {
+  flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; outline: none;
+  font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1.1; letter-spacing: -0.5px;
+  color: var(--ink-amount); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.amount::placeholder, .amount.empty { color: var(--muted); }
+.bal { border: 0; background: transparent; padding: 0; font-size: 13px; font-weight: 600; color: var(--muted-dark); }
+.bal:hover { color: var(--ink); text-decoration: underline; }
+.muted { color: var(--muted-dark); font-size: 13px; }
+
+.token {
+  flex: none; height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+  font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; box-shadow: var(--shadow-soft);
+}
+select.token {
+  appearance: none; padding-right: 34px; cursor: pointer;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2312160c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+}
+
+.flip {
+  display: grid; place-items: center; width: 44px; height: 44px; margin: -10px auto; position: relative; z-index: 1;
+  border-radius: 14px; border: 4px solid var(--white); background: var(--lime-fab); color: var(--ink);
+  font-weight: 700; font-size: 15px; letter-spacing: -2px;
+}
+.flip:hover { background: var(--lime-fab-core); }
+
+.details { margin: 14px 0 0; padding: 4px 4px 0; display: grid; gap: 8px; font-size: 14px; }
+.row { display: flex; justify-content: space-between; gap: 16px; }
+.row dt { color: var(--muted-dark); }
+.row dd { margin: 0; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.row.warn dd { color: var(--caution-text); background: var(--caution-well); border-radius: 999px; padding: 0 8px; }
+
+.cta {
+  width: 100%; height: 56px; margin-top: 18px; border-radius: 999px; border: 1px solid transparent;
+  background: var(--pill-dark); color: #fff; font: 700 16px var(--font-ui);
+}
+.cta:hover:not(:disabled) { background: var(--pill-dark-hover); }
+.cta:disabled { background: var(--line); color: var(--muted-dark); }
+
+.status { margin: 12px 0 0; padding: 10px 14px; border-radius: 16px; font-size: 14px; background: var(--screen); }
+.status.ok { background: var(--go-well); color: var(--pos-text); }
+.status.err { background: var(--stop-well); color: var(--stop); overflow-wrap: anywhere; }
+.status a { font-weight: 700; }
+
+/* ---- Footer ---- */
+.foot { max-width: 480px; margin: 28px auto 0; font-size: 13px; color: var(--muted-dark); }
+.foot p { margin: 0 0 10px; }
+.foot a { font-family: var(--font-mono); font-size: 12px; }
+
+@media (max-width: 560px) {
+  .page { padding: 0 16px 32px; }
+  .top { padding: 18px 0 24px; }
+  .chain { display: none; }
+  .card { padding: 16px; border-radius: var(--radius-panel); }
+  .amount { font-size: 32px; }
+}
