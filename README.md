@@ -3,20 +3,19 @@
 Self-custodial swap interface for **USDG pairs on Robinhood Chain** (cryptofi.eth).
 
 - **Static frontend only.** Vite + React + wagmi + Reown AppKit. No backend, no database, no order matching. Hash routes (`#/security`, `#/transparency`, `#/terms`, `#/privacy`, `#/disclaimer`) so every page works from an IPFS gateway.
-- **You sign everything.** Swaps call the Uniswap v4 Universal Router directly; USDG and cbBTC are spent through Permit2 with an exact-amount, 30-minute permit.
-- **Existing liquidity only.** CryptoFi holds no liquidity. It quotes the known v4 pools for a pair with the official v4 Quoter and routes through the one that returns the most output.
+- **You sign everything.** Swaps call the Uniswap v4 Universal Router directly; ERC-20 inputs (USDG and every listed token) are spent through Permit2 with an exact-amount, 30-minute permit.
+- **Existing liquidity only.** CryptoFi holds no liquidity. It quotes the listed v4 routes for a pair with the official v4 Quoter and uses the one that returns the most output.
 - **Passive.** Shows the quote, route, pool LP fee, price impact vs. the pool mid price, the interface fee, slippage and the minimum received. No recommendations and no "best price" labels.
 - **Interface fee: 0.25%** of the output, taken on-chain by the router's `TAKE_PORTION` action and sent to the CryptoFi 2-of-3 Safe `0x413513175061152D09aCc597f472A807b59374F5`.
 - **ENS primary names** are read from Ethereum mainnet (forward-verified by the Universal Resolver).
 
 ## Pairs and pools (Robinhood Chain, 4663)
 
-| Pair | Pools | Notes |
-|---|---|---|
-| USDG ↔ ETH (native) | 2 × dynamic-fee hooked pools | ~$6M each at launch |
-| USDG ↔ cbBTC | 1 dynamic-fee hooked pool, 1 × 0.15% hookless | ~$250K + ~$100K |
+USDG paired with **ETH, cbBTC, PONS, CASHCAT, HOOKR, PRIORS and ORBIO**. Routes are a direct USDG pool, or USDG → ETH → token through two pools in one swap; the app quotes every listed route and uses the one with the most output.
 
-Pool keys, hooks and contract addresses are in [`src/lib/config.ts`](src/lib/config.ts). All were checked on-chain.
+Pools are hand-picked in [`src/lib/config.ts`](src/lib/config.ts). Most of these tokens have hundreds of v4 pools, mostly spam. The listing rule: real depth, a sane fee, no hook with a `ReturnDelta` permission (so it can't change swap amounts), and the pool must quote in **both** directions (a buy-only hook is excluded). Token addresses were confirmed against the Robinhood Wallet; same-symbol copies exist.
+
+`npm run verify-routes` quotes every listed route, buy and sell, against live state.
 
 ## Develop
 

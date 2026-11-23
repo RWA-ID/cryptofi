@@ -11,7 +11,7 @@ export const termsIntro = `These Terms of Service (“Terms”) govern your use 
 
 export const terms: Section[] = [
   { h: '1. What CryptoFi is', ps: [
-    'CryptoFi is a free-to-access, open-source software interface that helps you build and submit transactions to third-party Uniswap v4 smart contracts on Robinhood Chain to swap USDG with ETH or cbBTC. It is a static website with no server operated by us.',
+    'CryptoFi is a free-to-access, open-source software interface that helps you build and submit transactions to third-party Uniswap v4 smart contracts on Robinhood Chain to swap USDG with ETH, cbBTC and the other tokens listed in the Interface. It is a static website with no server operated by us.',
     'CryptoFi is not an exchange, broker, dealer, money transmitter, custodian or market maker. We never hold your funds or private keys, never sign or send a transaction for you, hold no liquidity and do not match orders. Every transaction is created by your wallet, signed by you and executed by public smart contracts we do not own or control.',
   ] },
   { h: '2. Eligibility', ps: [
@@ -27,7 +27,7 @@ export const terms: Section[] = [
     'Pool LP fees (including dynamic fees set by third-party hooks) and network gas are separate, are not received by us, and are set by the pools and the network. We may change the interface fee for future swaps; any change will be visible in the Interface and in the public source code before it applies.',
   ] },
   { h: '5. Third-party protocols and assets', ps: [
-    'The Interface relies on systems we do not control, including Robinhood Chain, Uniswap v4 contracts and pool hooks, Permit2, the USDG and cbBTC tokens, RPC providers, Reown (WalletConnect), ENS, IPFS and its gateways. Their availability, security, accuracy and terms are their own. A pool or hook may change fees, be paused, be exploited or lose liquidity at any time.',
+    'The Interface relies on systems we do not control, including Robinhood Chain, Uniswap v4 contracts and pool hooks, Permit2, USDG, cbBTC and every other listed token, RPC providers, Reown (WalletConnect), ENS, IPFS and its gateways. Their availability, security, accuracy and terms are their own. A pool or hook may change fees, be paused, be exploited or lose liquidity at any time.',
   ] },
   { h: '6. Prohibited use', ps: [
     'You may not use the Interface to break any law; to launder money, evade sanctions, finance terrorism, manipulate markets or commit fraud; to interfere with, attack or overload the Interface or the networks it uses; or to misrepresent CryptoFi as affiliated with Robinhood, Uniswap, Coinbase, Paxos or the Global Dollar Network.',
@@ -105,7 +105,7 @@ export const disclaimer: Section[] = [
     'Every swap executes through smart contracts CryptoFi did not write, deploy or audit, including pool hooks that set dynamic fees and may have their own administrators. Contracts can contain bugs, be exploited, be paused or behave unexpectedly. Verify what you interact with on the Transparency page.',
   ] },
   { h: 'Token risk', ps: [
-    'USDG is a stablecoin issued by a third party and may lose its peg. cbBTC is a wrapped token whose value depends on its issuer’s custody of bitcoin; it is not native bitcoin. ETH is volatile. You can lose some or all of the value you swap.',
+    'USDG is a stablecoin issued by a third party and may lose its peg. cbBTC is a wrapped token whose value depends on its issuer’s custody of bitcoin; it is not native bitcoin. ETH is volatile. PONS, CASHCAT, HOOKR, PRIORS, ORBIO and other community tokens are highly volatile, can have thin liquidity, and may lose all of their value; tokens with the same name or symbol may be unrelated copies. Listing a token is not an endorsement. You can lose some or all of the value you swap.',
   ] },
   { h: 'Network risk', ps: [
     'Robinhood Chain, its sequencer, RPC providers and bridges may experience downtime, congestion, reorganizations or failures. Failed transactions still cost gas.',

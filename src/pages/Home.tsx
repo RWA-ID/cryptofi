@@ -1,5 +1,6 @@
 import { SwapCard } from '../components/SwapCard.tsx'
-import { FEE_RECIPIENT } from '../lib/config.ts'
+import { ASSETS, FEE_RECIPIENT, POOLS, TOKENS } from '../lib/config.ts'
+import { TokenLogo } from '../components/TokenPicker.tsx'
 import { addrUrl, short } from '../lib/links.ts'
 
 const steps = [
@@ -10,25 +11,14 @@ const steps = [
 ]
 
 const fees = [
-  { v: 'Dynamic', t: 'Pool LP fee', d: 'Set per swap by the pool’s hook, or a fixed 0.15% on the hookless cbBTC pool. Paid to liquidity providers.' },
+  { v: 'Dynamic', t: 'Pool LP fee', d: 'Set per swap by a pool’s hook, or a fixed rate on hookless pools. Shown for every pool on your route. Paid to liquidity providers.' },
   { v: '0.25%', t: 'CryptoFi interface fee', d: 'Taken from the output by the router’s TAKE_PORTION action and sent to the 2-of-3 Safe.' },
   { v: 'Gas', t: 'Network fee', d: 'Paid in ETH to Robinhood Chain. Your wallet shows the estimate before you confirm.' },
   { v: 'None', t: 'Hidden spread', d: 'The quote is the Quoter’s output. No markup, no “best price” label, no route recommendation.' },
 ]
 
-const pairs = [
-  { pair: 'USDG ↔ ETH', count: '2 pools', pools: [
-    { label: 'Dynamic fee · tick spacing 1 · hooked', tvl: '~$6M at launch' },
-    { label: 'Dynamic fee · tick spacing 10 · hooked', tvl: '~$6M at launch' },
-  ] },
-  { pair: 'USDG ↔ cbBTC', count: '2 pools', pools: [
-    { label: 'Dynamic fee · tick spacing 10 · hooked', tvl: '~$250K at launch' },
-    { label: '0.15% fixed · no hook', tvl: '~$100K at launch' },
-  ] },
-]
-
 const limits = [
-  { t: 'Third-party contracts.', d: 'Pools, hooks, Permit2, USDG and cbBTC are not CryptoFi’s. A hook can set the fee and may carry its own admin permissions.' },
+  { t: 'Third-party contracts.', d: 'Pools, hooks, Permit2 and every token are not CryptoFi’s. A hook can set the fee and may carry its own admin permissions.' },
   { t: 'RPC providers.', d: 'Quotes and balances are read through a public Robinhood Chain RPC or Alchemy. They see the requests your browser makes.' },
   { t: 'Gateways and DNS.', d: 'eth.limo and eth.link resolve the ENS name to IPFS. ENS is how you find CryptoFi, not something the swap depends on.' },
   { t: 'Your wallet and device.', d: 'If either is compromised, no interface can protect you. Read every prompt.' },
@@ -46,7 +36,7 @@ export function Home() {
           <h1>Nothing to trust but the code.</h1>
           <p className="subhead">Self-custodial USDG swaps on Robinhood Chain.</p>
           <p className="hero-lede">
-            A frontend-only interface for swapping USDG with ETH and cbBTC against existing Uniswap v4 pools. No backend,
+            A frontend-only interface for swapping USDG with ETH, cbBTC and Robinhood Chain community tokens against existing Uniswap v4 pools. No backend,
             no database, no accounts. Your wallet signs every transaction and talks to the contracts directly.
           </p>
           <div className="ctas">
@@ -137,29 +127,34 @@ export function Home() {
           <p className="kicker">Pairs</p>
           <h2 className="section-title">USDG meets onchain liquidity.</h2>
           <p className="body">
-            CryptoFi holds no liquidity. It quotes every known Uniswap v4 pool for a pair and routes through whichever
-            returns the most output, then shows you which pool and hook that is.
+            CryptoFi holds no liquidity. It quotes every listed Uniswap v4 pool for a pair, directly against USDG or
+            through ETH, and routes through whichever returns the most output, then shows you which pools and hooks
+            that is. Out of hundreds of pools per token, only those with real depth, a sane fee and a hook that can’t
+            change swap amounts are listed.
           </p>
           <p className="small">
             <b>cbBTC</b> is Coinbase Wrapped BTC on Robinhood Chain — a token representation, not native bitcoin.{' '}
-            <b>ETH</b> is the chain’s native gas asset.
+            <b>ETH</b> is the chain’s native gas asset. PONS, CASHCAT, HOOKR, PRIORS and ORBIO are community tokens:
+            volatile, thinner markets. Copies with the same symbol exist; CryptoFi pins each contract address.
           </p>
         </div>
-        <div className="pairs">
-          {pairs.map((p) => (
-            <div key={p.pair} className="pair">
-              <div className="pair-head">
-                <b>{p.pair}</b>
-                <span className="badge nogas">{p.count}</span>
-              </div>
-              {p.pools.map((pl) => (
-                <div key={pl.label} className="pool">
-                  <span>{pl.label}</span>
-                  <span className="mono">{pl.tvl}</span>
+        <div className="assets">
+          {ASSETS.map((a) => {
+            const p = POOLS[a]
+            const n = p.usdg.length + p.eth.length
+            return (
+              <div key={a} className="asset">
+                <TokenLogo token={TOKENS[a]} size={36} />
+                <div>
+                  <b>USDG ↔ {a}</b>
+                  <span>
+                    {n} pool{n > 1 ? 's' : ''}
+                    {p.eth.length > 0 ? ' · also via ETH' : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
       </section>
 

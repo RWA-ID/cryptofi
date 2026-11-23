@@ -11,7 +11,7 @@ import {
   type PublicClient,
 } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { CONTRACTS, FEE_RECIPIENT, POOLS, TOKENS, isNative, robinhood, type Token } from '../src/lib/config.ts'
+import { ASSETS, CONTRACTS, FEE_RECIPIENT, POOLS, TOKENS, isNative, robinhood, type Token } from '../src/lib/config.ts'
 import { buildSwap, erc20Abi, getQuotes, makePermit, permit2Abi, permitTypedData, poolId } from '../src/lib/swap.ts'
 
 const RPC = process.env.FORK_RPC ?? 'http://127.0.0.1:8547'
@@ -46,7 +46,7 @@ async function swap(tokenIn: Token, tokenOut: Token, amountIn: bigint) {
   const quotes = await getQuotes(pub, tokenIn, tokenOut, amountIn)
   check(quotes.length > 0, `got ${quotes.length} quote(s)`)
   const q = quotes[0]
-  console.log(`        route: ${q.pool.label} | impact ${(q.priceImpact * 100).toFixed(3)}% | lpFee ${q.lpFee / 1e4}%`)
+  console.log(`        route: ${q.route.label} (${q.route.hops.length} hop) | impact ${(q.priceImpact * 100).toFixed(3)}%`)
 
   const block = await pub.getBlock()
   const now = Number(block.timestamp) // chain time, not this machine's clock
@@ -94,13 +94,16 @@ async function main() {
   await pub.request({ method: 'anvil_setBalance' as never, params: [account.address, '0x56BC75E2D63100000'] as never }) // 100 ETH
   console.log(`Test account ${account.address} (fresh key, 100 ETH on the fork)\n`)
   console.log('Pool IDs match the on-chain Initialize events:')
-  const ids = [...POOLS.ETH, ...POOLS.cbBTC].map((p) => poolId(p.key))
+  const ids = [...POOLS.ETH.usdg, ...POOLS.cbBTC.usdg].map((p) => poolId(p.key))
   ids.forEach((id, i) => check(id === EXPECTED_IDS[i], `${id.slice(0, 12)}...`))
 
-  const usdg = await swap(TOKENS.ETH, TOKENS.USDG, parseUnits('1', 18))
-  await swap(TOKENS.USDG, TOKENS.ETH, usdg / 2n)
-  const btc = await swap(TOKENS.USDG, TOKENS.cbBTC, parseUnits('500', 6))
-  await swap(TOKENS.cbBTC, TOKENS.USDG, btc)
+  // Fund with USDG, then buy and fully sell back every listed asset through its best route.
+  await swap(TOKENS.ETH, TOKENS.USDG, parseUnits('1', 18))
+  for (const a of ASSETS) {
+    const t = TOKENS[a]
+    const bought = await swap(TOKENS.USDG, t, parseUnits('150', 6))
+    if (bought > 0n) await swap(t, TOKENS.USDG, isNative(t) ? bought / 2n : bought)
+  }
 
   console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL PASSED')
   process.exit(failures ? 1 : 0)

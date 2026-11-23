@@ -1,17 +1,26 @@
-import { CONTRACTS, FEE_RECIPIENT, NATIVE, POOLS, TOKENS } from '../lib/config.ts'
+import { ASSETS, CONTRACTS, DYNAMIC_FEE, FEE_RECIPIENT, NATIVE, POOLS, TOKENS, type Pool } from '../lib/config.ts'
 import { addrUrl } from '../lib/links.ts'
 
 type RowT = { name: string; role: string; addr: string; url: string }
 const row = (name: string, role: string, addr: string): RowT => ({ name, role, addr, url: addrUrl(addr) })
 
 // Generated from src/lib/config.ts, the same addresses the swap code uses.
-const hookRows: RowT[] = [...POOLS.ETH, ...POOLS.cbBTC].map((p) => {
-  const pair = p.key.currency0 === NATIVE ? 'ETH/USDG' : 'cbBTC/USDG'
-  const spacing = `tick spacing ${p.key.tickSpacing}`
-  return p.key.hooks === NATIVE
-    ? { name: `${pair} · ${spacing}`, role: `${p.key.fee / 10_000}% fixed fee`, addr: 'No hook (0x0)', url: addrUrl(CONTRACTS.poolManager) }
-    : row(`${pair} · ${spacing}`, 'Dynamic-fee hook', p.key.hooks)
-})
+const feeText = (p: Pool) => (p.key.fee === DYNAMIC_FEE ? 'dynamic fee' : `${p.key.fee / 10_000}% fixed fee`)
+const poolRow = (p: Pool): RowT =>
+  p.key.hooks === NATIVE
+    ? { name: p.label, role: `${feeText(p)} · tick spacing ${p.key.tickSpacing} · no hook`, addr: 'No hook (0x0)', url: addrUrl(CONTRACTS.poolManager) }
+    : row(p.label, `${feeText(p)} · tick spacing ${p.key.tickSpacing} · hook (no ReturnDelta)`, p.key.hooks)
+const poolGroups = ASSETS.map((a) => ({
+  title: `${a} pools`,
+  note:
+    POOLS[a].eth.length > 0
+      ? `Direct USDG pools, plus ${a}/ETH pools used as USDG → ETH → ${a} (the first hop goes through an ETH/USDG pool).`
+      : `Direct ${a}/USDG pools.`,
+  rows: [...POOLS[a].usdg, ...POOLS[a].eth].map(poolRow),
+}))
+const tokenRows: RowT[] = ASSETS.filter((a) => a !== 'ETH').map((a) =>
+  row(`${TOKENS[a].symbol} · ${TOKENS[a].name}`, `${TOKENS[a].decimals} decimals`, TOKENS[a].address),
+)
 
 const groups: { title: string; note: string; rows: RowT[] }[] = [
   {
@@ -27,17 +36,10 @@ const groups: { title: string; note: string; rows: RowT[] }[] = [
   },
   {
     title: 'Tokens',
-    note: 'ETH is native and has no contract. cbBTC is a token representation of BTC, not native bitcoin.',
-    rows: [
-      row(`USDG · ${TOKENS.USDG.name}`, `${TOKENS.USDG.decimals} decimals`, TOKENS.USDG.address),
-      row(`cbBTC · ${TOKENS.cbBTC.name}`, `${TOKENS.cbBTC.decimals} decimals`, TOKENS.cbBTC.address),
-    ],
+    note: 'ETH is native and has no contract. cbBTC is a token representation of BTC, not native bitcoin. PONS, CASHCAT, HOOKR, PRIORS and ORBIO are community tokens; addresses confirmed against the Robinhood Wallet. Same-symbol copies exist; check the address.',
+    rows: [row(`USDG · ${TOKENS.USDG.name}`, `${TOKENS.USDG.decimals} decimals`, TOKENS.USDG.address), ...tokenRows],
   },
-  {
-    title: 'Pool hooks',
-    note: 'Third-party hooks set the dynamic LP fee. Inspect each one’s owner and permissions before trading.',
-    rows: hookRows,
-  },
+  ...poolGroups,
   {
     title: 'CryptoFi',
     note: 'The only CryptoFi-controlled address. It receives fees; it has no role in executing your swap.',
@@ -73,6 +75,16 @@ export function Transparency() {
           </div>
         </section>
       ))}
+      <section className="group">
+        <h2>How pools are listed</h2>
+        <p className="note">
+          Most of these tokens have hundreds of Uniswap v4 pools, many of them spam: fees up to 99%, empty liquidity, or
+          hooks that change what you receive. CryptoFi lists a pool only if it has real depth and a sane fee, its hook
+          (if any) has no ReturnDelta permission, so it cannot change swap amounts, and it quotes in both directions.
+          A pool whose hook allows buys but blocks sells is never listed. Third-party hooks still set dynamic fees and
+          may have their own admins; inspect them above.
+        </p>
+      </section>
       <section className="group">
         <h2>Frontend</h2>
         <p className="note">

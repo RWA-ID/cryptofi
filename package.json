@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "fork-test": "node --experimental-strip-types scripts/fork-test.ts",
-    "pin": "node scripts/pin.mjs"
+    "pin": "node scripts/pin.mjs",
+    "verify-routes": "node --experimental-strip-types scripts/verify-routes.ts"
   },
   "dependencies": {
     "@reown/appkit": "1.8.24",

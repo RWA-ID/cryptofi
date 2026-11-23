@@ -4,13 +4,16 @@ import { useQuery } from '@tanstack/react-query'
 import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi'
 import { formatUnits, parseUnits, type Hex, type PublicClient } from 'viem'
 import {
+  ASSETS,
   CONTRACTS,
+  DYNAMIC_FEE,
   FEE_BIPS,
   FEE_RECIPIENT,
   NATIVE,
   TOKENS,
   isNative,
   robinhood,
+  type Asset,
   type Token,
 } from '../lib/config.ts'
 import {
@@ -23,8 +26,7 @@ import {
   type Quote,
 } from '../lib/swap.ts'
 import { EXPLORER, REPO_URL, addrUrl, short } from '../lib/links.ts'
-
-type Asset = 'ETH' | 'cbBTC'
+import { TokenPicker } from './TokenPicker.tsx'
 type Status =
   | { kind: 'idle' }
   | { kind: 'busy'; step: string }
@@ -33,7 +35,7 @@ type Status =
 
 const SLIPPAGE_PRESETS = [10n, 50n, 100n] // bips
 const ETH_GAS_RESERVE = parseUnits('0.0005', 18)
-const DYNAMIC_FEE = 0x800000
+const ASSET_TOKENS: Token[] = ASSETS.map((a) => TOKENS[a])
 
 function fmt(v: bigint, t: Token, max = 6) {
   const n = Number(formatUnits(v, t.decimals))
@@ -68,31 +70,17 @@ function balanceOf(client: PublicClient, t: Token, who: `0x${string}`) {
     : client.readContract({ address: t.address, abi: erc20Abi, functionName: 'balanceOf', args: [who] })
 }
 
+/** USDG per asset: cents for ETH/BTC, significant digits for sub-cent tokens. */
+function fmtRate(v?: number) {
+  if (v === undefined || !isFinite(v)) return '…'
+  if (v >= 1) return v.toLocaleString('en-US', { maximumFractionDigits: 2 })
+  return v.toPrecision(4)
+}
+
 function errorText(e: unknown): string {
   const err = e as { shortMessage?: string; message?: string; name?: string }
   if (err?.name === 'UserRejectedRequestError' || /reject|denied/i.test(err?.message ?? '')) return 'Request rejected in wallet.'
   return err?.shortMessage ?? err?.message ?? 'Something went wrong.'
-}
-
-function TokenChip({ token }: { token: Token }) {
-  if (token.symbol === 'USDG') {
-    return (
-      <span className="token with-icon">
-        <img src="./brand/usdg-token.svg" alt="" width={26} height={26} />
-        USDG
-      </span>
-    )
-  }
-  return <span className="token">{token.symbol}</span>
-}
-
-function AssetSelect({ asset, onAsset }: { asset: Asset; onAsset: (a: Asset) => void }) {
-  return (
-    <select className="token" value={asset} onChange={(e) => onAsset(e.target.value as Asset)} aria-label="Asset">
-      <option value="ETH">ETH</option>
-      <option value="cbBTC">cbBTC</option>
-    </select>
-  )
 }
 
 export function SwapCard() {
@@ -143,6 +131,11 @@ export function SwapCard() {
   // which viem's chain assertion cannot parse. For that connector only, skip the
   // assertion (chain: null). Injected and WalletConnect wallets keep it.
   const writeChain = connector?.id === 'AUTH' ? null : robinhood
+
+  const pickAsset = (t: Token) => {
+    setAsset(t.symbol as Asset)
+    setStatus({ kind: 'idle' })
+  }
 
   const flip = () => {
     setBuying((b) => !b)
@@ -234,8 +227,8 @@ export function SwapCard() {
     : undefined
   const usdgPerAsset = rate ? (buying ? 1 / rate : rate) : undefined
 
-  // The hook shown is the quoted pool's own; before a quote, the first pool for the pair.
-  const hook = quote?.pool.key.hooks
+  // The hooks shown are the quoted route's own pools.
+  const hooks = quote?.route.hops.map((h) => h.key.hooks) ?? []
   const txRows: { k: string; v: string; url: string }[] = [
     { k: 'Network', v: `Robinhood Chain · ${robinhood.id}`, url: EXPLORER },
     { k: 'Router', v: short(CONTRACTS.universalRouter), url: addrUrl(CONTRACTS.universalRouter) },
@@ -245,9 +238,11 @@ export function SwapCard() {
       url: addrUrl(CONTRACTS.permit2),
     },
     { k: 'PoolManager', v: short(CONTRACTS.poolManager), url: addrUrl(CONTRACTS.poolManager) },
-    ...(hook
-      ? [{ k: 'Hook', v: hook === NATIVE ? 'none (hookless pool)' : short(hook), url: addrUrl(hook === NATIVE ? CONTRACTS.poolManager : hook) }]
-      : []),
+    ...hooks.map((h, i) => ({
+      k: hooks.length > 1 ? `Hook, pool ${i + 1}` : 'Hook',
+      v: h === NATIVE ? 'none (hookless pool)' : short(h),
+      url: addrUrl(h === NATIVE ? CONTRACTS.poolManager : h),
+    })),
     { k: 'Fee recipient (Safe 2/3)', v: short(FEE_RECIPIENT), url: addrUrl(FEE_RECIPIENT) },
     { k: 'Frontend source', v: 'RWA-ID/cryptofi', url: REPO_URL },
   ]
@@ -302,7 +297,7 @@ export function SwapCard() {
             onChange={(e) => setAmountStr(e.target.value.replace(',', '.'))}
             aria-label={`Amount of ${tokenIn.symbol} to pay`}
           />
-          {buying ? <TokenChip token={tokenIn} /> : <AssetSelect asset={asset} onAsset={setAsset} />}
+          {buying ? <TokenPicker token={tokenIn} /> : <TokenPicker token={tokenIn} options={ASSET_TOKENS} onSelect={(t) => pickAsset(t)} />}
         </div>
       </section>
 
@@ -317,17 +312,19 @@ export function SwapCard() {
           <output className={quote ? 'amount' : 'amount empty'}>
             {quote ? fmt(quote.userAmountOut, tokenOut) : quotes.isFetching ? '…' : '0'}
           </output>
-          {buying ? <AssetSelect asset={asset} onAsset={setAsset} /> : <TokenChip token={tokenOut} />}
+          {buying ? <TokenPicker token={tokenOut} options={ASSET_TOKENS} onSelect={(t) => pickAsset(t)} /> : <TokenPicker token={tokenOut} />}
         </div>
       </section>
 
       {quote && (
         <dl className="details">
-          <Row k="Rate" v={`1 ${asset} = ${usdgPerAsset?.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDG`} />
-          <Row k="Route" v={quote.pool.label} />
+          <Row k="Rate" v={`1 ${asset} = ${fmtRate(usdgPerAsset)} USDG`} />
+          <Row k="Route" v={quote.route.hops.length > 1 ? `${quote.route.label} (2 pools)` : quote.route.label} />
           <Row
-            k="Pool LP fee"
-            v={quote.pool.key.fee === DYNAMIC_FEE ? 'Dynamic, set per swap by the pool hook' : `${quote.pool.key.fee / 10_000}%`}
+            k={quote.route.hops.length > 1 ? 'Pool LP fees' : 'Pool LP fee'}
+            v={quote.route.hops
+              .map((h) => (h.key.fee === DYNAMIC_FEE ? 'dynamic (hook)' : `${h.key.fee / 10_000}%`))
+              .join(' + ')}
           />
           <Row k="Price impact incl. LP fee" v={`${(quote.priceImpact * 100).toFixed(2)}%`} warn={quote.priceImpact > 0.02} />
           <Row k={`CryptoFi fee (${Number(FEE_BIPS) / 100}%)`} v={`${fmt(quote.feeAmount, tokenOut)} ${tokenOut.symbol}`} />
