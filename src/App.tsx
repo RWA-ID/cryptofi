@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { WalletButton } from './components/WalletButton.tsx'
-import { Home } from './pages/Home.tsx'
+import { About, Home } from './pages/Home.tsx'
 import { Security } from './pages/Security.tsx'
 import { Transparency } from './pages/Transparency.tsx'
 import { ListToken } from './pages/ListToken.tsx'
@@ -8,7 +8,7 @@ import { Disclaimer, Privacy, Terms } from './pages/Legal.tsx'
 import { CONTACT_EMAIL, REPO_URL, SITE_URL, X_URL } from './lib/links.ts'
 
 // Hash routing, so every page works from an IPFS gateway path with no server rewrites.
-const PAGES = ['security', 'transparency', 'list', 'terms', 'privacy', 'disclaimer'] as const
+const PAGES = ['about', 'security', 'transparency', 'list', 'terms', 'privacy', 'disclaimer'] as const
 type Page = (typeof PAGES)[number] | ''
 
 function readPage(): Page | null {
@@ -58,18 +58,20 @@ export function App() {
     }
   }, [menuOpen])
 
-  const nav: [string, string, Page | 'x'][] = [
+  // [label, href, route key, shown only in the phone menu]
+  const nav: [string, string, Page | 'x', boolean?][] = [
     ['Swap', '#/', ''],
+    ['About CryptoFi', '#/about', 'about', true],
     ['Security', '#/security', 'security'],
     ['Transparency', '#/transparency', 'transparency'],
     ['List a token', '#/list', 'list'],
     ['Source', REPO_URL, 'x'],
   ]
-  const navLinks = nav.map(([label, href, key]) => (
+  const navLinks = nav.map(([label, href, key, menuOnly]) => (
     <a
       key={label}
       href={href}
-      className={key === page ? 'on' : ''}
+      className={[key === page ? 'on' : '', menuOnly ? 'menu-only' : ''].join(' ').trim() || undefined}
       aria-current={key === page ? 'page' : undefined}
       onClick={() => setMenuOpen(false)}
       {...(key === 'x' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
@@ -117,6 +119,7 @@ export function App() {
 
       <main>
         {page === '' && <Home />}
+        {page === 'about' && <About />}
         {page === 'security' && <Security />}
         {page === 'transparency' && <Transparency />}
         {page === 'list' && <ListToken />}

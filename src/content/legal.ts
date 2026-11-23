@@ -105,7 +105,7 @@ export const disclaimer: Section[] = [
     'Every swap executes through smart contracts CryptoFi did not write, deploy or audit, including pool hooks that set dynamic fees and may have their own administrators. Contracts can contain bugs, be exploited, be paused or behave unexpectedly. Verify what you interact with on the Transparency page.',
   ] },
   { h: 'Token risk', ps: [
-    'USDG is a stablecoin issued by a third party and may lose its peg. cbBTC is a wrapped token whose value depends on its issuer’s custody of bitcoin; it is not native bitcoin. ETH is volatile. PONS, CASHCAT, HOOKR, PRIORS, ORBIO and other community tokens are highly volatile, can have thin liquidity, and may lose all of their value; tokens with the same name or symbol may be unrelated copies. Listing a token is not an endorsement. You can lose some or all of the value you swap.',
+    'USDG is a stablecoin issued by a third party and may lose its peg. cbBTC is a wrapped token whose value depends on its issuer’s custody of bitcoin; it is not native bitcoin. ETH is volatile. Community tokens (every listed token other than USDG, ETH and cbBTC) are highly volatile, can have thin liquidity, and may lose all of their value; tokens with the same name or symbol may be unrelated copies. Listing a token is not an endorsement. You can lose some or all of the value you swap.',
   ] },
   { h: 'Network risk', ps: [
     'Robinhood Chain, its sequencer, RPC providers and bridges may experience downtime, congestion, reorganizations or failures. Failed transactions still cost gas.',

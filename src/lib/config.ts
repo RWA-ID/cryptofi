@@ -50,12 +50,18 @@ export const TOKENS = {
   HOOKR: { symbol: 'HOOKR', name: 'Hookr.fun', address: '0x18E674231A58c239Dc7DaeDcffE15Ec3A24cff5c', decimals: 18, logo: './tokens/hookr.png' },
   PRIORS: { symbol: 'PRIORS', name: 'Priors Agents', address: '0xeDBf91223639800BCd5756815CAf908Df3b890bE', decimals: 18, logo: './tokens/priors.svg' },
   ORBIO: { symbol: 'ORBIO', name: 'Orbio.so', address: '0xAa07A0e9209e16aC99708C3EC70159c6eF3128A3', decimals: 18, logo: './tokens/orbio.png' },
+  // STONKBROKER and AI: addresses from the Robinhood Wallet (Hector, 2026-11-23). AI is a
+  // non-upgradeable minimal-proxy clone (implementation 0x3be8b97f…c599 fixed in its bytecode).
+  STONKBROKER: { symbol: 'STONKBROKER', name: 'StonkBroker', address: '0xe934e36A439C94017B64a3FecE66AF12099aBF50', decimals: 18, logo: './tokens/stonkbroker.png' },
+  AI: { symbol: 'AI', name: 'Artificial Inu', address: '0x2E8c31162b855A2ffa90F6F8634643Ad6F111e18', decimals: 18, logo: './tokens/ai.png' },
 } as const satisfies Record<string, Token>
 
 export type TokenSymbol = keyof typeof TOKENS
 export type Asset = Exclude<TokenSymbol, 'USDG'>
 /** Display order in the picker. */
-export const ASSETS: Asset[] = ['ETH', 'cbBTC', 'PONS', 'CASHCAT', 'HOOKR', 'PRIORS', 'ORBIO']
+export const ASSETS: Asset[] = ['ETH', 'cbBTC', 'PONS', 'CASHCAT', 'HOOKR', 'PRIORS', 'ORBIO', 'STONKBROKER', 'AI']
+/** Listed community tokens: everything except the chain's native gas asset and cbBTC. */
+export const COMMUNITY: Asset[] = ASSETS.filter((a) => a !== 'ETH' && a !== 'cbBTC')
 
 export type PoolKey = {
   currency0: Address
@@ -130,8 +136,8 @@ export const POOLS: Record<Asset, { usdg: Pool[]; eth: Pool[] }> = {
   },
   HOOKR: {
     usdg: [
+      // Delisted 2026-11-23: HOOKR/USDG 3.04% (no hook). Over the published 1% fee limit.
       pool('HOOKR/USDG · 1% · no hook', U, TOKENS.HOOKR.address, 10000, 100),
-      pool('HOOKR/USDG · 3.04% · no hook', U, TOKENS.HOOKR.address, 30400, 100),
     ],
     eth: [
       // Not listed: HOOKR/ETH 0.0375% with hook 0xB85138cb…d4C0. Its hook reverts every
@@ -149,6 +155,18 @@ export const POOLS: Record<Asset, { usdg: Pool[]; eth: Pool[] }> = {
       pool('ORBIO/USDG · dynamic fee', U, TOKENS.ORBIO.address, DYNAMIC_FEE, 200, HOOK_DYN_A),
     ],
     eth: [pool('ORBIO/ETH · 0.9% · no hook', E, TOKENS.ORBIO.address, 9000, 90)],
+  },
+  // Not listed for STONKBROKER or AI (quoted 2026-11-23): pools with hook 0xc52f…54c0 fill
+  // buys but revert every sell (buy-only); the remaining hookless pools are too thin to
+  // sell back, or charge over 1%. STONKBROKER/ETH dynamic (HOOK_DYN_B) does not quote at all.
+  // Neither token has a USDG pool with real depth.
+  STONKBROKER: {
+    usdg: [],
+    eth: [pool('STONKBROKER/ETH · 1% · no hook', E, TOKENS.STONKBROKER.address, 10000, 200)],
+  },
+  AI: {
+    usdg: [],
+    eth: [pool('AI/ETH · dynamic fee', E, TOKENS.AI.address, DYNAMIC_FEE, 200, HOOK_DYN_B)],
   },
 }
 

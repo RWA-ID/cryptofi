@@ -11,7 +11,7 @@ Self-custodial swap interface for **USDG pairs on Robinhood Chain** (cryptofi.et
 
 ## Pairs and pools (Robinhood Chain, 4663)
 
-USDG paired with **ETH, cbBTC, PONS, CASHCAT, HOOKR, PRIORS and ORBIO**. Routes are a direct USDG pool, or USDG → ETH → token through two pools in one swap; the app quotes every listed route and uses the one with the most output.
+USDG paired with **ETH, cbBTC, PONS, CASHCAT, HOOKR, PRIORS, ORBIO, STONKBROKER and AI** (the list lives in `ASSETS`). Routes are a direct USDG pool, or USDG → ETH → token through two pools in one swap; the app quotes every listed route and uses the one with the most output.
 
 Pools are hand-picked in [`src/lib/config.ts`](src/lib/config.ts). Most of these tokens have hundreds of v4 pools, mostly spam. The listing rule: real depth, a sane fee, no hook with a `ReturnDelta` permission (so it can't change swap amounts), and the pool must quote in **both** directions (a buy-only hook is excluded). Token addresses were confirmed against the Robinhood Wallet; same-symbol copies exist.
 

@@ -103,12 +103,25 @@ input::placeholder { color: var(--muted); }
 .menu a:hover { background: var(--white-soft); color: var(--ink); }
 .menu a.on { color: var(--ink); background: var(--header-pale); }
 
-/* Narrow screens: collapse the nav into the menu. */
+.nav .menu-only { display: none; }
+.about-hero { grid-template-columns: minmax(0, 1fr); }
+
+/* Narrow screens: collapse the nav into the menu, and Home shows only the swap card.
+ * The rest of Home lives at #/about ("About CryptoFi" in the menu). */
 @media (max-width: 860px) {
   .nav { display: none; }
   .menu-btn { display: inline-grid; }
   .top { flex-wrap: nowrap; }
+  .home .hero-intro, .home .home-more { display: none; }
+  .home .hero { padding-top: 0; }
 }
+
+/* ---- Supported pairs: plain text, no logos or ranking ---- */
+.pairs-list { font-family: var(--font-display); font-size: 18px; font-weight: 600; line-height: 1.7; margin: 0 0 12px; max-width: 900px; }
+.pairs-list .pair-name { white-space: nowrap; }
+.pairs-sep { color: var(--muted); font-weight: 400; margin: 0 4px; }
+.pairs-note { max-width: 900px; }
+.pairs-note b { color: var(--ink); }
 /* Single-column hero (below ~1076px the two 460px columns no longer fit): swap card first. */
 @media (max-width: 1075px) {
   .hero .card { order: -1; }
@@ -279,11 +292,6 @@ select.token {
 .fee-t { display: block; font-size: 14px; font-weight: 700; margin-top: 4px; }
 .fee-d { display: block; font-size: 13px; color: var(--muted-dark); margin-top: 4px; }
 
-.pairs-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 24px; }
-.pairs-wrap .section-title { margin-bottom: 12px; }
-.pairs-wrap .body { font-size: 15px; color: var(--muted-dark); margin: 0 0 16px; max-width: 560px; }
-.pairs-wrap .small { max-width: 560px; }
-.pairs-wrap .small b { color: var(--ink); }
 .pairs { display: grid; gap: 16px; }
 .pair { background: var(--white); border-radius: var(--radius-panel); box-shadow: var(--shadow-soft); padding: 18px 20px; }
 .pair-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -432,8 +440,3 @@ html:root {
 }
 
 /* Pairs: one tile per listed asset, generated from config. */
-.assets { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-content: start; }
-.asset { display: flex; align-items: center; gap: 12px; background: var(--white); border-radius: var(--radius-tile); box-shadow: var(--shadow-soft); padding: 14px 16px; }
-.asset .tok-logo { width: 36px; height: 36px; }
-.asset b { display: block; font-family: var(--font-display); font-size: 17px; }
-.asset span { font-size: 12px; color: var(--muted-dark); }

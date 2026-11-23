@@ -1,4 +1,4 @@
-import { ASSETS, CONTRACTS, DYNAMIC_FEE, FEE_RECIPIENT, NATIVE, POOLS, TOKENS, type Pool } from '../lib/config.ts'
+import { ASSETS, COMMUNITY, CONTRACTS, DYNAMIC_FEE, FEE_RECIPIENT, NATIVE, POOLS, TOKENS, type Pool } from '../lib/config.ts'
 import { addrUrl } from '../lib/links.ts'
 
 type RowT = { name: string; role: string; addr: string; url: string }
@@ -36,7 +36,7 @@ const groups: { title: string; note: string; rows: RowT[] }[] = [
   },
   {
     title: 'Tokens',
-    note: 'ETH is native and has no contract. cbBTC is a token representation of BTC, not native bitcoin. PONS, CASHCAT, HOOKR, PRIORS and ORBIO are community tokens; addresses confirmed against the Robinhood Wallet. Same-symbol copies exist; check the address.',
+    note: `ETH is native and has no contract. cbBTC is a token representation of BTC, not native bitcoin. ${COMMUNITY.join(', ')} are community tokens; addresses confirmed against the Robinhood Wallet. Same-symbol copies exist; check the address.`,
     rows: [row(`USDG · ${TOKENS.USDG.name}`, `${TOKENS.USDG.decimals} decimals`, TOKENS.USDG.address), ...tokenRows],
   },
   ...poolGroups,
