@@ -51,7 +51,7 @@ export const terms: Section[] = [
     'These Terms are governed by the laws of the State of Delaware, USA, without regard to conflict-of-laws rules. Disputes will be brought exclusively in the state or federal courts located in Delaware. Before filing a claim, you agree to contact us via x.com/cryptofidapp or a GitHub issue and try in good faith to resolve it informally for 30 days.',
   ] },
   { h: '13. Changes and contact', ps: [
-    `We may update these Terms and will change the effective date above. Continued use after changes take effect means you accept them. Contact: ${ENTITY} · x.com/cryptofidapp · github.com/RWA-ID/cryptofi.`,
+    `We may update these Terms and will change the effective date above. Continued use after changes take effect means you accept them. Contact: ${ENTITY} · contact@cryptofi.trade · x.com/cryptofidapp · github.com/RWA-ID/cryptofi.`,
   ] },
 ]
 
@@ -85,13 +85,13 @@ export const privacy: Section[] = [
     'Your wallet connector may store connection preferences in your browser’s local storage so you stay connected. That data stays on your device. Clear it at any time from your browser settings.',
   ] },
   { h: 'If you contact us', ps: [
-    'If you message @cryptofidapp on X or open a GitHub issue, we receive whatever you send and your public profile on that platform, and use it only to respond.',
+    'If you email us, message @cryptofidapp on X or open a GitHub issue, we receive whatever you send, your email address or your public profile on that platform, and use it only to respond. Email is handled by our email providers (Cloudflare Email Routing and Google).',
   ] },
   { h: 'Your rights', ps: [
     'Because we hold no personal information from your use of the Interface, there is usually nothing for us to access, correct or delete. For data held by the third parties above, contact them directly. Onchain records cannot be deleted by anyone.',
   ] },
   { h: 'Children', ps: ['The Interface is not intended for anyone under 18.'] },
-  { h: 'Changes and contact', ps: [`We may update this policy and will change the effective date above. Contact: ${ENTITY} · x.com/cryptofidapp.`] },
+  { h: 'Changes and contact', ps: [`We may update this policy and will change the effective date above. Contact: ${ENTITY} · contact@cryptofi.trade · x.com/cryptofidapp.`] },
 ]
 
 export const disclaimer: Section[] = [

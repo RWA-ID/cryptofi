@@ -1,0 +1,49 @@
+name: Listing request
+description: Ask for a Robinhood Chain token to be listed on CryptoFi. Listing is free; criteria at cryptofi.eth.limo/#/list
+title: "Listing request: "
+labels: ["listing"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Listing is free and decided only by the published criteria (cryptofi.eth.limo/#/list). CryptoFi never asks for payment to list a token.
+  - type: input
+    id: token
+    attributes:
+      label: Token name and symbol
+    validations:
+      required: true
+  - type: input
+    id: address
+    attributes:
+      label: Contract address (Robinhood Chain, 4663)
+      placeholder: "0x..."
+    validations:
+      required: true
+  - type: textarea
+    id: pools
+    attributes:
+      label: Uniswap v4 pool ID(s) to route through
+      description: Pools against USDG, or against ETH for a USDG → ETH → token route.
+    validations:
+      required: true
+  - type: input
+    id: website
+    attributes:
+      label: Official website
+  - type: input
+    id: x
+    attributes:
+      label: Official X account
+  - type: textarea
+    id: proof
+    attributes:
+      label: Proof you speak for the token
+      description: A link to a post from the official X account mentioning this request, or a message signed by the deployer.
+    validations:
+      required: true
+  - type: textarea
+    id: logo
+    attributes:
+      label: Logo
+      description: Drag in a square PNG or SVG, at least 256 x 256.

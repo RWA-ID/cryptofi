@@ -82,7 +82,8 @@ export function Transparency() {
           hooks that change what you receive. CryptoFi lists a pool only if it has real depth and a sane fee, its hook
           (if any) has no ReturnDelta permission, so it cannot change swap amounts, and it quotes in both directions.
           A pool whose hook allows buys but blocks sells is never listed. Third-party hooks still set dynamic fees and
-          may have their own admins; inspect them above.
+          may have their own admins; inspect them above. Listing is free and follows only these rules; see{' '}
+          <a href="#/list">List a token</a>.
         </p>
       </section>
       <section className="group">

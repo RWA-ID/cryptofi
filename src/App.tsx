@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WalletButton } from './components/WalletButton.tsx'
 import { Home } from './pages/Home.tsx'
 import { Security } from './pages/Security.tsx'
 import { Transparency } from './pages/Transparency.tsx'
+import { ListToken } from './pages/ListToken.tsx'
 import { Disclaimer, Privacy, Terms } from './pages/Legal.tsx'
-import { REPO_URL, SITE_URL, X_URL } from './lib/links.ts'
+import { CONTACT_EMAIL, REPO_URL, SITE_URL, X_URL } from './lib/links.ts'
 
 // Hash routing, so every page works from an IPFS gateway path with no server rewrites.
-const PAGES = ['security', 'transparency', 'terms', 'privacy', 'disclaimer'] as const
+const PAGES = ['security', 'transparency', 'list', 'terms', 'privacy', 'disclaimer'] as const
 type Page = (typeof PAGES)[number] | ''
 
 function readPage(): Page | null {
@@ -39,12 +40,43 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [page])
 
+  // Narrow screens: the nav collapses into a menu at the top right.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => setMenuOpen(false), [page])
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false)
+    const onDown = (e: PointerEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [menuOpen])
+
   const nav: [string, string, Page | 'x'][] = [
     ['Swap', '#/', ''],
     ['Security', '#/security', 'security'],
     ['Transparency', '#/transparency', 'transparency'],
+    ['List a token', '#/list', 'list'],
     ['Source', REPO_URL, 'x'],
   ]
+  const navLinks = nav.map(([label, href, key]) => (
+    <a
+      key={label}
+      href={href}
+      className={key === page ? 'on' : ''}
+      aria-current={key === page ? 'page' : undefined}
+      onClick={() => setMenuOpen(false)}
+      {...(key === 'x' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
+      {label}
+    </a>
+  ))
 
   return (
     <div className="wrap">
@@ -55,25 +87,39 @@ export function App() {
           <span className="chain">Robinhood Chain</span>
         </a>
         <nav aria-label="Main" className="nav">
-          {nav.map(([label, href, key]) => (
-            <a
-              key={label}
-              href={href}
-              className={key === page ? 'on' : ''}
-              aria-current={key === page ? 'page' : undefined}
-              {...(key === 'x' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-            >
-              {label}
-            </a>
-          ))}
+          {navLinks}
         </nav>
-        <WalletButton />
+        <div className="top-right" ref={menuRef}>
+          <WalletButton />
+          <button
+            type="button"
+            className="menu-btn"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              {menuOpen ? (
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
+          {menuOpen && (
+            <nav id="mobile-menu" aria-label="Menu" className="menu">
+              {navLinks}
+            </nav>
+          )}
+        </div>
       </header>
 
       <main>
         {page === '' && <Home />}
         {page === 'security' && <Security />}
         {page === 'transparency' && <Transparency />}
+        {page === 'list' && <ListToken />}
         {page === 'terms' && <Terms />}
         {page === 'privacy' && <Privacy />}
         {page === 'disclaimer' && <Disclaimer />}
@@ -87,6 +133,8 @@ export function App() {
             <a href={X_URL} target="_blank" rel="noopener noreferrer">@cryptofidapp</a>
             <span className="sep" aria-hidden />
             <a href={REPO_URL} target="_blank" rel="noopener noreferrer">RWA-ID/cryptofi</a>
+            <span className="sep" aria-hidden />
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
           </div>
           <div className="foot-right">
             <div className="socials">
@@ -114,6 +162,7 @@ export function App() {
         <nav aria-label="Legal" className="legal-nav">
           <a href="#/security">Security</a>
           <a href="#/transparency">Transparency</a>
+          <a href="#/list">List a token</a>
           <a href="#/terms">Terms</a>
           <a href="#/privacy">Privacy</a>
           <a href="#/disclaimer">Disclaimer</a>
