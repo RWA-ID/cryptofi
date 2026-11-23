@@ -45,3 +45,7 @@ npm run pin            # pins dist/ via Pinata (PINATA_JWT in .env.local), print
 ```
 
 Then set the `cryptofi.eth` contenthash to `ipfs://<CID>`.
+
+## License
+
+[Apache-2.0](LICENSE)
