@@ -2,7 +2,7 @@
 
 Self-custodial swap interface for **USDG pairs on Robinhood Chain** (cryptofi.eth).
 
-- **Static frontend only.** Vite + React + wagmi/RainbowKit. No backend, no database, no order matching.
+- **Static frontend only.** Vite + React + wagmi + Reown AppKit. No backend, no database, no order matching. Hash routes (`#/security`, `#/transparency`, `#/terms`, `#/privacy`, `#/disclaimer`) so every page works from an IPFS gateway.
 - **You sign everything.** Swaps call the Uniswap v4 Universal Router directly; USDG and cbBTC are spent through Permit2 with an exact-amount, 30-minute permit.
 - **Existing liquidity only.** CryptoFi holds no liquidity. It quotes the known v4 pools for a pair with the official v4 Quoter and routes through the one that returns the most output.
 - **Passive.** Shows the quote, route, pool LP fee, price impact vs. the pool mid price, the interface fee, slippage and the minimum received. No recommendations and no "best price" labels.

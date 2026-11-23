@@ -1,364 +1,132 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useQuery } from '@tanstack/react-query'
-import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from 'wagmi'
-import { formatUnits, parseUnits, type Hex, type PublicClient } from 'viem'
-import { CONTRACTS, FEE_BIPS, FEE_RECIPIENT, TOKENS, isNative, robinhood, type Token } from './lib/config.ts'
-import {
-  buildSwap,
-  erc20Abi,
-  getQuotes,
-  makePermit,
-  permit2Abi,
-  permitTypedData,
-  type Quote,
-} from './lib/swap.ts'
-import { WalletButton } from './WalletButton.tsx'
+import { useEffect, useState } from 'react'
+import { WalletButton } from './components/WalletButton.tsx'
+import { Home } from './pages/Home.tsx'
+import { Security } from './pages/Security.tsx'
+import { Transparency } from './pages/Transparency.tsx'
+import { Disclaimer, Privacy, Terms } from './pages/Legal.tsx'
+import { REPO_URL, SITE_URL, X_URL } from './lib/links.ts'
 
-type Asset = 'ETH' | 'cbBTC'
-type Status =
-  | { kind: 'idle' }
-  | { kind: 'busy'; step: string }
-  | { kind: 'done'; hash: Hex }
-  | { kind: 'error'; message: string; hash?: Hex }
+// Hash routing, so every page works from an IPFS gateway path with no server rewrites.
+const PAGES = ['security', 'transparency', 'terms', 'privacy', 'disclaimer'] as const
+type Page = (typeof PAGES)[number] | ''
 
-const EXPLORER = robinhood.blockExplorers.default.url
-const SLIPPAGE_PRESETS = [10n, 50n, 100n] // bips
-const ETH_GAS_RESERVE = parseUnits('0.0005', 18)
-
-function fmt(v: bigint, t: Token, max = 6) {
-  const n = Number(formatUnits(v, t.decimals))
-  if (n === 0) return '0'
-  if (n < 10 ** -max) return `<${10 ** -max}`
-  return n.toLocaleString('en-US', { maximumFractionDigits: n >= 1000 ? 2 : max })
-}
-
-function parseAmount(s: string, t: Token): bigint {
-  const clean = s.trim()
-  if (!/^\d*\.?\d*$/.test(clean) || clean === '' || clean === '.') return 0n
-  const [i, f = ''] = clean.split('.')
-  try {
-    return parseUnits(`${i || '0'}.${f.slice(0, t.decimals)}`, t.decimals)
-  } catch {
-    return 0n
-  }
-}
-
-function useDebounced<T>(v: T, ms: number) {
-  const [d, setD] = useState(v)
-  useEffect(() => {
-    const id = setTimeout(() => setD(v), ms)
-    return () => clearTimeout(id)
-  }, [v, ms])
-  return d
-}
-
-function balanceOf(client: PublicClient, t: Token, who: `0x${string}`) {
-  return isNative(t)
-    ? client.getBalance({ address: who })
-    : client.readContract({ address: t.address, abi: erc20Abi, functionName: 'balanceOf', args: [who] })
-}
-
-const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
-
-function errorText(e: unknown): string {
-  const err = e as { shortMessage?: string; message?: string; name?: string }
-  if (err?.name === 'UserRejectedRequestError' || /reject|denied/i.test(err?.message ?? '')) return 'Request rejected in wallet.'
-  return err?.shortMessage ?? err?.message ?? 'Something went wrong.'
+function readPage(): Page | null {
+  const h = (location.hash || '').replace(/^#\/?/, '')
+  if (h === 'swap') return null // in-page anchor, not a route
+  return (PAGES as readonly string[]).includes(h) ? (h as Page) : ''
 }
 
 export function App() {
-  const { address, chainId, isConnected } = useAccount()
-  const publicClient = usePublicClient({ chainId: robinhood.id }) as PublicClient
-  const { data: walletClient } = useWalletClient()
-  const { switchChain, isPending: switching } = useSwitchChain()
+  const [page, setPage] = useState<Page>(() => readPage() ?? '')
 
-  const [asset, setAsset] = useState<Asset>('ETH')
-  const [buying, setBuying] = useState(true) // true: USDG → asset
-  const [amountStr, setAmountStr] = useState('')
-  const [slippage, setSlippage] = useState(50n)
-  const [showSettings, setShowSettings] = useState(false)
-  const [status, setStatus] = useState<Status>({ kind: 'idle' })
-
-  const tokenIn: Token = buying ? TOKENS.USDG : TOKENS[asset]
-  const tokenOut: Token = buying ? TOKENS[asset] : TOKENS.USDG
-  const amountIn = useMemo(() => parseAmount(amountStr, tokenIn), [amountStr, tokenIn])
-  const debouncedIn = useDebounced(amountIn, 350)
-
-  const quotes = useQuery({
-    queryKey: ['quote', tokenIn.symbol, tokenOut.symbol, debouncedIn.toString()],
-    queryFn: () => getQuotes(publicClient, tokenIn, tokenOut, debouncedIn),
-    enabled: debouncedIn > 0n && !!publicClient,
-    refetchInterval: 15_000,
-  })
-  const quote: Quote | undefined = debouncedIn === amountIn ? quotes.data?.[0] : undefined
-
-  const balIn = useQuery({
-    queryKey: ['bal', tokenIn.symbol, address],
-    queryFn: () => balanceOf(publicClient, tokenIn, address!),
-    enabled: !!address && !!publicClient,
-    refetchInterval: 20_000,
-  })
-  const balOut = useQuery({
-    queryKey: ['bal', tokenOut.symbol, address],
-    queryFn: () => balanceOf(publicClient, tokenOut, address!),
-    enabled: !!address && !!publicClient,
-    refetchInterval: 20_000,
-  })
-
-  const wrongChain = isConnected && chainId !== robinhood.id
-  const insufficient = balIn.data !== undefined && amountIn > balIn.data
-  const busy = status.kind === 'busy'
-
-  const flip = () => {
-    setBuying((b) => !b)
-    setAmountStr('')
-    setStatus({ kind: 'idle' })
-  }
-
-  const setMax = () => {
-    if (balIn.data === undefined) return
-    let v = balIn.data
-    if (isNative(tokenIn)) v = v > ETH_GAS_RESERVE ? v - ETH_GAS_RESERVE : 0n
-    setAmountStr(formatUnits(v, tokenIn.decimals))
-  }
-
-  async function swap() {
-    if (!walletClient || !address || amountIn <= 0n) return
-    let hash: Hex | undefined
-    try {
-      // Chain time, not the device clock, for every deadline.
-      const now = Number((await publicClient.getBlock()).timestamp)
-
-      let permit
-      if (!isNative(tokenIn)) {
-        const allowance = await publicClient.readContract({
-          address: tokenIn.address, abi: erc20Abi, functionName: 'allowance', args: [address, CONTRACTS.permit2],
-        })
-        if (allowance < amountIn) {
-          setStatus({ kind: 'busy', step: `Approve ${tokenIn.symbol} for Permit2 (exact amount)…` })
-          const h = await walletClient.writeContract({
-            address: tokenIn.address, abi: erc20Abi, functionName: 'approve', args: [CONTRACTS.permit2, amountIn],
-            chain: robinhood, account: address,
-          })
-          setStatus({ kind: 'busy', step: 'Waiting for approval to confirm…' })
-          const r = await publicClient.waitForTransactionReceipt({ hash: h })
-          if (r.status !== 'success') throw new Error('Approval transaction failed on-chain.')
+  useEffect(() => {
+    const onHash = () => {
+      const next = readPage()
+      if (next === null) {
+        // "#swap" from another page: go home, then scroll to the card.
+        if (page !== '') {
+          setPage('')
+          setTimeout(() => document.getElementById('swap')?.scrollIntoView({ behavior: 'smooth' }), 50)
         }
-        const [, , nonce] = await publicClient.readContract({
-          address: CONTRACTS.permit2, abi: permit2Abi, functionName: 'allowance',
-          args: [address, tokenIn.address, CONTRACTS.universalRouter],
-        })
-        setStatus({ kind: 'busy', step: 'Sign the Permit2 message (no gas)…' })
-        const p = makePermit(tokenIn.address, amountIn, nonce, now)
-        const signature = await walletClient.signTypedData({ account: address, ...permitTypedData(robinhood.id, p) })
-        permit = { permit: p, signature }
+        return
       }
-
-      setStatus({ kind: 'busy', step: 'Refreshing quote…' })
-      const fresh = (await getQuotes(publicClient, tokenIn, tokenOut, amountIn))[0]
-      if (!fresh) throw new Error('No pool can fill this amount right now.')
-
-      const tx = buildSwap({ quote: fresh, tokenIn, tokenOut, slippageBips: slippage, deadline: BigInt(now + 20 * 60), permit })
-      setStatus({ kind: 'busy', step: 'Confirm the swap in your wallet…' })
-      hash = await walletClient.sendTransaction({
-        account: address, chain: robinhood, to: tx.to, data: tx.data, value: tx.value,
-      })
-      setStatus({ kind: 'busy', step: 'Waiting for confirmation…' })
-      const rcpt = await publicClient.waitForTransactionReceipt({ hash })
-      if (rcpt.status !== 'success') throw new Error('The swap transaction reverted on-chain.')
-      setStatus({ kind: 'done', hash })
-      setAmountStr('')
-      balIn.refetch()
-      balOut.refetch()
-    } catch (e) {
-      setStatus({ kind: 'error', message: errorText(e), hash })
+      if (next !== page) {
+        setPage(next)
+        window.scrollTo(0, 0)
+      }
     }
-  }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [page])
 
-  let buttonLabel = 'Swap'
-  let buttonAction: (() => void) | undefined = swap
-  if (wrongChain) {
-    buttonLabel = switching ? 'Switching…' : 'Switch to Robinhood Chain'
-    buttonAction = () => switchChain({ chainId: robinhood.id })
-  } else if (amountIn <= 0n) { buttonLabel = 'Enter an amount'; buttonAction = undefined }
-  else if (insufficient) { buttonLabel = `Insufficient ${tokenIn.symbol}`; buttonAction = undefined }
-  else if (quotes.isFetching && !quote) { buttonLabel = 'Fetching quote…'; buttonAction = undefined }
-  else if (!quote) { buttonLabel = 'No quote for this amount'; buttonAction = undefined }
-  else if (busy) { buttonLabel = 'Working…'; buttonAction = undefined }
-  else if (!isNative(tokenIn)) buttonLabel = 'Approve & swap'
-
-  const minReceived = quote
-    ? (() => {
-        const g = (quote.amountOut * (10_000n - slippage)) / 10_000n
-        return g - (g * FEE_BIPS) / 10_000n
-      })()
-    : undefined
-  const rate = quote
-    ? Number(formatUnits(quote.userAmountOut, tokenOut.decimals)) / Number(formatUnits(quote.amountIn, tokenIn.decimals))
-    : undefined
-  const usdgPerAsset = rate ? (buying ? 1 / rate : rate) : undefined
+  const nav: [string, string, Page | 'x'][] = [
+    ['Swap', '#/', ''],
+    ['Security', '#/security', 'security'],
+    ['Transparency', '#/transparency', 'transparency'],
+    ['Source', REPO_URL, 'x'],
+  ]
 
   return (
-    <div className="page">
+    <div className="wrap">
       <header className="top">
-        <div className="brand">
+        <a href="#/" className="brand">
           <span className="mark" aria-hidden>C</span>
           <span className="word">CryptoFi</span>
           <span className="chain">Robinhood Chain</span>
-        </div>
+        </a>
+        <nav aria-label="Main" className="nav">
+          {nav.map(([label, href, key]) => (
+            <a
+              key={label}
+              href={href}
+              className={key === page ? 'on' : ''}
+              aria-current={key === page ? 'page' : undefined}
+              {...(key === 'x' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
         <WalletButton />
       </header>
 
-      <main className="card" aria-label="Swap">
-        <div className="card-head">
-          <h1>Swap</h1>
-          <button className="ghost" onClick={() => setShowSettings((s) => !s)} aria-expanded={showSettings}>
-            Slippage {Number(slippage) / 100}%
-          </button>
-        </div>
-
-        {showSettings && (
-          <div className="settings">
-            <span>Max slippage</span>
-            <div className="chips">
-              {SLIPPAGE_PRESETS.map((b) => (
-                <button key={b.toString()} className={b === slippage ? 'chip on' : 'chip'} onClick={() => setSlippage(b)}>
-                  {Number(b) / 100}%
-                </button>
-              ))}
-              <input
-                className="chip-input"
-                inputMode="decimal"
-                placeholder="Custom %"
-                aria-label="Custom slippage percent"
-                onChange={(e) => {
-                  const v = Number(e.target.value)
-                  if (v > 0 && v <= 20) setSlippage(BigInt(Math.round(v * 100)))
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        <section className="leg">
-          <div className="leg-top">
-            <span>You pay</span>
-            {balIn.data !== undefined && (
-              <button className="bal" onClick={setMax}>
-                Balance {fmt(balIn.data, tokenIn)} · Max
-              </button>
-            )}
-          </div>
-          <div className="leg-row">
-            <input
-              className="amount"
-              inputMode="decimal"
-              placeholder="0"
-              value={amountStr}
-              onChange={(e) => setAmountStr(e.target.value.replace(',', '.'))}
-              aria-label={`Amount of ${tokenIn.symbol} to pay`}
-            />
-            <TokenPicker token={tokenIn} fixed={buying} asset={asset} onAsset={setAsset} />
-          </div>
-        </section>
-
-        <button className="flip" onClick={flip} aria-label="Switch direction">↓↑</button>
-
-        <section className="leg">
-          <div className="leg-top">
-            <span>You receive</span>
-            {balOut.data !== undefined && <span className="muted">Balance {fmt(balOut.data, tokenOut)}</span>}
-          </div>
-          <div className="leg-row">
-            <output className={quote ? 'amount' : 'amount empty'}>
-              {quote ? fmt(quote.userAmountOut, tokenOut) : quotes.isFetching ? '…' : '0'}
-            </output>
-            <TokenPicker token={tokenOut} fixed={!buying} asset={asset} onAsset={setAsset} />
-          </div>
-        </section>
-
-        {quote && (
-          <dl className="details">
-            <Row k="Rate" v={`1 ${asset} = ${usdgPerAsset?.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDG`} />
-            <Row k="Route" v={quote.pool.label} />
-            <Row
-              k="Pool LP fee"
-              v={
-                quote.pool.key.fee === 0x800000
-                  ? 'Dynamic, set per swap by the pool hook'
-                  : `${quote.pool.key.fee / 10_000}%`
-              }
-            />
-            <Row
-              k="Price impact incl. LP fee"
-              v={`${(quote.priceImpact * 100).toFixed(2)}%`}
-              warn={quote.priceImpact > 0.02}
-            />
-            <Row k={`CryptoFi fee (${Number(FEE_BIPS) / 100}%)`} v={`${fmt(quote.feeAmount, tokenOut)} ${tokenOut.symbol}`} />
-            <Row k="Max slippage" v={`${Number(slippage) / 100}%`} />
-            <Row k="Minimum received" v={`${fmt(minReceived!, tokenOut)} ${tokenOut.symbol}`} />
-          </dl>
-        )}
-
-        {isConnected ? (
-          <button className="cta" disabled={!buttonAction} onClick={buttonAction}>
-            {buttonLabel}
-          </button>
-        ) : (
-          <ConnectButton.Custom>
-            {({ openConnectModal }) => (
-              <button className="cta" onClick={openConnectModal}>Connect wallet</button>
-            )}
-          </ConnectButton.Custom>
-        )}
-
-        {status.kind === 'busy' && <p className="status">{status.step}</p>}
-        {status.kind === 'done' && (
-          <p className="status ok">
-            Swap confirmed. <a href={`${EXPLORER}/tx/${status.hash}`} target="_blank" rel="noreferrer">View transaction</a>
-          </p>
-        )}
-        {status.kind === 'error' && (
-          <p className="status err">
-            {status.message}{' '}
-            {status.hash && <a href={`${EXPLORER}/tx/${status.hash}`} target="_blank" rel="noreferrer">View transaction</a>}
-          </p>
-        )}
+      <main>
+        {page === '' && <Home />}
+        {page === 'security' && <Security />}
+        {page === 'transparency' && <Transparency />}
+        {page === 'terms' && <Terms />}
+        {page === 'privacy' && <Privacy />}
+        {page === 'disclaimer' && <Disclaimer />}
       </main>
 
       <footer className="foot">
-        <p>
+        <div className="foot-top">
+          <div className="foot-links">
+            <a href={SITE_URL} rel="noopener">cryptofi.eth</a>
+            <span className="sep" aria-hidden />
+            <a href={X_URL} target="_blank" rel="noopener noreferrer">@cryptofidapp</a>
+            <span className="sep" aria-hidden />
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer">RWA-ID/cryptofi</a>
+          </div>
+          <div className="foot-right">
+            <div className="socials">
+              <a href={X_URL} target="_blank" rel="noopener noreferrer" aria-label="CryptoFi on X (@cryptofidapp)" title="@cryptofidapp">
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+                </svg>
+              </a>
+              <a href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="CryptoFi source on GitHub" title="GitHub">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M12 .5C5.65.5.5 5.65.5 12.02c0 5.09 3.29 9.4 7.86 10.93.58.1.79-.25.79-.56v-1.97c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.53 11.53 0 0 0 23.5 12.02C23.5 5.65 18.35.5 12 .5Z" />
+                </svg>
+              </a>
+            </div>
+            <a className="badge-link" href="https://docs.robinhood.com/chain/" target="_blank" rel="noopener noreferrer">
+              <span>Built on</span>
+              <img src="./brand/robinhood-chain-logo-black.svg" alt="Robinhood Chain" width={152} height={20} className="rh-logo" />
+            </a>
+            <a className="badge-link" href="https://globaldollar.com" target="_blank" rel="noopener noreferrer">
+              <span>Swaps in</span>
+              <img src="./brand/usdg-brandmark-dark.svg" alt="Global Dollar USDG" width={106} height={35} className="usdg-logo" />
+            </a>
+          </div>
+        </div>
+        <nav aria-label="Legal" className="legal-nav">
+          <a href="#/security">Security</a>
+          <a href="#/transparency">Transparency</a>
+          <a href="#/terms">Terms</a>
+          <a href="#/privacy">Privacy</a>
+          <a href="#/disclaimer">Disclaimer</a>
+          <a href={REPO_URL} target="_blank" rel="noopener noreferrer">Source</a>
+        </nav>
+        <p className="foot-blurb">
           CryptoFi is an interface. You sign every transaction in your own wallet, and swaps execute directly against
-          existing Uniswap v4 pools on Robinhood Chain. CryptoFi holds no funds or liquidity and runs no server.
-          Quotes come from the Uniswap v4 Quoter and can change before your transaction lands.
-        </p>
-        <p>
-          A {Number(FEE_BIPS) / 100}% interface fee is deducted from the output and sent to the CryptoFi multisig{' '}
-          <a href={`${EXPLORER}/address/${FEE_RECIPIENT}`} target="_blank" rel="noreferrer">{short(FEE_RECIPIENT)}</a>.
-          {' '}Router <a href={`${EXPLORER}/address/${CONTRACTS.universalRouter}`} target="_blank" rel="noreferrer">{short(CONTRACTS.universalRouter)}</a>
-          {' · '}Permit2 <a href={`${EXPLORER}/address/${CONTRACTS.permit2}`} target="_blank" rel="noreferrer">{short(CONTRACTS.permit2)}</a>
+          existing third-party Uniswap v4 pools on Robinhood Chain. CryptoFi holds no funds or liquidity and runs no
+          server. Quotes can change before your transaction lands. Not investment advice. CryptoFi is independent and
+          not affiliated with, endorsed by, or sponsored by Robinhood Markets, Inc. or its affiliates, Uniswap Labs,
+          Coinbase, Paxos or the Global Dollar Network. USDG, cbBTC and the Robinhood Chain marks belong to their owners.
         </p>
       </footer>
     </div>
-  )
-}
-
-function Row({ k, v, warn }: { k: string; v: string; warn?: boolean }) {
-  return (
-    <div className={warn ? 'row warn' : 'row'}>
-      <dt>{k}</dt>
-      <dd>{v}</dd>
-    </div>
-  )
-}
-
-function TokenPicker({ token, fixed, asset, onAsset }: { token: Token; fixed: boolean; asset: Asset; onAsset: (a: Asset) => void }) {
-  if (fixed) return <span className="token">{token.symbol}</span>
-  return (
-    <select className="token" value={asset} onChange={(e) => onAsset(e.target.value as Asset)} aria-label="Asset">
-      <option value="ETH">ETH</option>
-      <option value="cbBTC">cbBTC</option>
-    </select>
   )
 }
